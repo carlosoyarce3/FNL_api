@@ -1,0 +1,2 @@
+const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET || 'fLv5kCB5K3phvrqE';
+exports.ADMIN_SECRET_KEY = ADMIN_SECRET_KEY;

@@ -1,65 +1,63 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
+const { ADMIN_SECRET_KEY } = require('./ADMIN_SECRET_KEY');
+require('dotenv').config(); // Load environment variables from a .env file
+
 const app = express();
-const PORT = process.env.PORT || 5000; 
+const PORT = process.env.PORT || 5000;
 
-// Middleware configuration
 app.use(cors());
-app.use(express.json()); // Crucial: Allows the API to parse incoming JSON data 
+app.use(express.json());
 
-// A secret key to protect your admin endpoint. Change "Kayfabe123" to your own password.
-const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET || "Kayfabe123"; 
+// Use environment variable for MongoDB; fall back to local DB for development
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb+srv://carlosoyarce3_db_user:fLv5kCB5K3phvrqE@fnl.epfanbh.mongodb.net/?appName=FNL';
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('Connected to MongoDB successfully!'))
+  .catch(err => console.error('Database connection error:', err));
 
-// Your data array
-let wrestlingNews = [
-{
-id: 1,
-title: "Championship Match Announced for Summer Bash!",
-date: "2026-09-05",
-category: "Match Announcement",
-content: "The Heavyweight Champion will defend the title against the ultimate underdog in a Steel Cage match."
-}
-]; 
+// Define the news schema
+const newsSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  category: { type: String, required: true },
+  content: { type: String, required: true },
+  date: { type: String, default: () => new Date().toISOString().split('T')[0] }
+});
 
-// 1. PUBLIC ENDPOINT: Fetch all news updates
-app.get('/api/news', (req, res) => {
-res.json(wrestlingNews);
-}); 
+const News = mongoose.model('News', newsSchema);
 
-// 2. ADMIN ENDPOINT: Add a new article
-app.post('/api/news/admin', (req, res) => {
-// Check for security key in the request headers
-const clientSecret = req.headers['x-admin-secret']; 
+// Public endpoint: fetch all news
+app.get('/api/news', async (req, res) => {
+  try {
+    const articles = await News.find().sort({ _id: -1 });
+    res.json(articles);
+  } catch (error) {
+    res.status(500).json({ error: 'Could not retrieve news updates.' });
+  }
+});
 
-if (!clientSecret || clientSecret !== ADMIN_SECRET_KEY) {
-return res.status(403).json({ error: "Unauthorized. Invalid secret key." });
-}
+// Admin endpoint: create a new article (requires x-admin-secret header)
+app.post('/api/news/admin', async (req, res) => {
+  const clientSecret = req.headers['x-admin-secret'];
 
-// Extract the news data sent by the admin
-const { title, category, content } = req.body;
+  if (!clientSecret || clientSecret !== ADMIN_SECRET_KEY) {
+    return res.status(403).json({ error: 'Unauthorized.' });
+  }
 
-// Basic validation to ensure fields aren't empty
-if (!title || !category || !content) {
-return res.status(400).json({ error: "Missing required fields: title, category, or content." });
-}
+  const { title, category, content } = req.body;
+  if (!title || !category || !content) {
+    return res.status(400).json({ error: 'Missing required fields.' });
+  }
 
-// Build the new article object
-const newArticle = {
-id: wrestlingNews.length + 1,
-title: title,
-date: new Date().toISOString().split('T')[0], // Automatically generates today's date (YYYY-MM-DD)
-category: category,
-content: content
-};
-
-// Add it to our array
-wrestlingNews.unshift(newArticle); // unshift adds it to the top so newest shows first
-
-// Return the newly created article as confirmation
-res.status(201).json({ message: "News article posted successfully!", data: newArticle });
-
-}); 
+  try {
+    const newArticle = new News({ title, category, content });
+    await newArticle.save();
+    res.status(201).json({ message: 'Article saved to database!', data: newArticle });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save article to database.' });
+  }
+});
 
 app.listen(PORT, () => {
-console.log(`Wrestling API is running on port ${PORT}`);
+  console.log(`Wrestling API running on port ${PORT}`);
 });
