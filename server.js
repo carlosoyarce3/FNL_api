@@ -18,16 +18,14 @@ mongoose.connect(MONGO_URI)
 
 // Define the news schema
 const newsSchema = new mongoose.Schema({
-    id:{type: String, required: true, unique: true},
-    category: { type: String, required: true },
-    link: { type: String, required: true },
-    date: { type: String, default: () => new Date().toISOString().split('T')[0] },
-    cover: { type: String, required: true },
     title: { type: String, required: true },
-    sub: { type: String, required: true },
+    category: { type: String, required: true },
     content: { type: String, required: true },
-    author: { type: String, required: true },
-
+    date: { type: String, required: true }, // Changed to string so you can type "22 de Agosto"
+    link: { type: String, required: true },
+    cover: { type: String, required: true }, // Holds your S3 image link
+    sub: { type: String, required: true },
+    author: { type: String, required: true }
 });
 
 const News = mongoose.model('News', newsSchema);
@@ -43,26 +41,43 @@ app.get('/api/news', async (req, res) => {
 });
 
 // Admin endpoint: create a new article (requires x-admin-secret header)
+// 4. ADMIN ENDPOINT: Save a new article to the database
 app.post('/api/news/admin', async (req, res) => {
-  const clientSecret = req.headers['x-admin-secret'];
+    const clientSecret = req.headers['x-admin-secret'];
+    
+    if (!clientSecret || clientSecret !== ADMIN_SECRET_KEY) {
+        return res.status(403).json({ error: "Unauthorized." });
+    }
 
-  if (!clientSecret || clientSecret !== ADMIN_SECRET_KEY) {
-    return res.status(403).json({ error: 'Unauthorized.' });
-  }
+    // Extract ALL your new custom fields from Postman's body
+    const { title, category, content, date, link, cover, sub, author } = req.body;
 
-  const { title, category, content } = req.body;
-  if (!title || !category || !content) {
-    return res.status(400).json({ error: 'Missing required fields.' });
-  }
+    // Check that the vital ones aren't empty
+    if (!title || !category || !content) {
+        return res.status(400).json({ error: "Missing required fields." });
+    }
 
-  try {
-    const newArticle = new News({ title, category, content });
-    await newArticle.save();
-    res.status(201).json({ message: 'Article saved to database!', data: newArticle });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to save article to database.' });
-  }
+    try {
+        // Create the document matching the new schema
+        const newArticle = new News({ 
+            title, 
+            category, 
+            content, 
+            date, 
+            link, 
+            cover, 
+            sub, 
+            author 
+        });
+        
+        await newArticle.save();
+        res.status(201).json({ message: "Details saved perfectly!", data: newArticle });
+    } catch (error) {
+        console.error(error); // This prints the exact crash reason to your Render logs if it hits an issue
+        res.status(500).json({ error: "Failed to save article to database." });
+    }
 });
+
 
 app.get('/', (req, res) => {
     res.send("Welcome to the Pro Wrestling News API! Use /api/news to view articles.");
