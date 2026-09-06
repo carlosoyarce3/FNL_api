@@ -58,6 +58,10 @@ app.post('/api/news/admin', async (req, res) => {
   }
 });
 
+app.get('/', (req, res) => {
+    res.send("Welcome to the Pro Wrestling News API! Use /api/news to view articles.");
+});
+
 app.listen(PORT, () => {
   console.log(`Wrestling API running on port ${PORT}`);
 });
