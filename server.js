@@ -18,10 +18,16 @@ mongoose.connect(MONGO_URI)
 
 // Define the news schema
 const newsSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  category: { type: String, required: true },
-  content: { type: String, required: true },
-  date: { type: String, default: () => new Date().toISOString().split('T')[0] }
+    id:{type: String, required: true, unique: true},
+    category: { type: String, required: true },
+    link: { type: String, required: true },
+    date: { type: String, default: () => new Date().toISOString().split('T')[0] },
+    cover: { type: String, required: true },
+    title: { type: String, required: true },
+    sub: { type: String, required: true },
+    content: { type: String, required: true },
+    author: { type: String, required: true },
+
 });
 
 const News = mongoose.model('News', newsSchema);
