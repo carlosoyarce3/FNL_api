@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 // Use environment variable for MongoDB; fall back to local DB for development
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb+srv://carlosoyarce3_db_user:fLv5kCB5K3phvrqE@fnl.epfanbh.mongodb.net/?appName=FNL';
+const MONGO_URI = process.env.MONGODB_URI;
 mongoose.connect(MONGO_URI)
   .then(() => console.log('Connected to MongoDB successfully!'))
   .catch(err => console.error('Database connection error:', err));
