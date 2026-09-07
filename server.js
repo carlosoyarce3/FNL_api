@@ -78,6 +78,39 @@ app.post('/api/news/admin', async (req, res) => {
     }
 });
 
+// 5. ADMIN ENDPOINT: Edit/Update an existing article by ID
+app.put('/api/news/admin/:id', async (req, res) => {
+    const clientSecret = req.headers['x-admin-secret'];
+    
+    // 1. Check for security key
+    if (!clientSecret || clientSecret !== ADMIN_SECRET_KEY) {
+        return res.status(403).json({ error: "Unauthorized." });
+    }
+
+    const articleId = req.params.id; // Pulls the MongoDB ID from the URL path
+    const { title, category, content, date, link, cover, sub, author } = req.body;
+
+    try {
+        // 2. Find the article in MongoDB and update its fields
+        const updatedArticle = await News.findByIdAndUpdate(
+            articleId,
+            { title, category, content, date, link, cover, sub, author },
+            { new: true, runValidators: true } // 'new: true' returns the updated document back to us
+        );
+
+        // If the ID doesn't exist in the database
+        if (!updatedArticle) {
+            return res.status(404).json({ error: "Article not found." });
+        }
+
+        res.json({ message: "Article updated successfully!", data: updatedArticle });
+    } catch (error) {
+        console.error("Error updating article:", error);
+        res.status(500).json({ error: "Failed to update article in database." });
+    }
+});
+
+
 
 app.get('/', (req, res) => {
     res.send("Welcome to the Pro Wrestling News API! Use /api/news to view articles.");
